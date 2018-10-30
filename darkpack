@@ -1,0 +1,112 @@
+#!/bin/bash
+#
+#
+#
+# darkpack -p my_arch_name file|dir
+# darkpack -i my_arch_name
+# darkpack -u my_arch_name
+
+#-----------------------------------------------------------------
+cmd="$1"
+check=""
+cwd="$(pwd)"
+
+if [ "$1" = "-p" ]; then
+	name="$2"
+	src="$3"
+	check="$3"
+	checkno="$4"
+	pack="$name.dark"
+	if [ ! -e "$src" ]; then
+		echo "Error: file not found"
+		exit 1
+	fi
+	if [ -e "$pack" ]; then
+		echo "Error: $pack already exists"
+		exit 1
+	fi
+	touch $pack
+	if [ $? -ne 0 ]; then
+		echo "Error: Could not write pack"
+		exit 1
+	fi
+	pack=$(readlink -f $pack)
+fi
+
+if [ "$1" = "-i" ]; then
+	pack="$2"
+	check="$2"
+	checkno="$3"
+	if [ ! -e "$pack" ]; then
+		echo "Error: file not found"
+		exit 1
+	fi
+fi
+
+if [ "$1" = "-u" ]; then
+	pack="$2"
+	check="$2"
+	checkno="$3"
+	if [ ! -e "$pack" ]; then
+		echo "Error: file not found"
+		exit 1
+	fi
+fi
+
+if [ "$check" = "" -o "$checkno" != "" ]; then
+	echo " darkpack -p my_arch_name file|dir"
+	echo " darkpack -i my_arch_name"
+	echo " darkpack -u my_arch_name"
+	exit 1
+fi
+
+#-----------------------------------------------------------------
+
+function encryptFile {
+	gpg --batch --passphrase-fd 0 -c "$1"
+}
+
+function doPack {
+	# get password
+	read -s -p "Password: " password
+
+	echo "$password"
+
+	# create working dir
+	temp=$(mktemp -d)
+
+	# create descriptor file
+	echo "[$name] = $src" > "$temp/description"
+
+	# encrypt descriptor
+	echo "$password" | encryptFile "$temp/description"
+	rm -f "$temp/description"
+
+	# pack the src
+	tar cvfz "$temp/content" "$src"
+
+	# encrypt content
+	echo "$password" | encryptFile "$temp/content"
+	rm -f "$temp/content"
+
+	# pack the pack
+	cd $temp
+	tar cvf "$pack" *
+	rm -f *
+	cd ..
+	rmdir "$temp"
+	cd $cwd
+
+	echo $temp
+}
+
+if [ "$cmd" = "-p" ]; then
+	doPack
+	exit 0
+fi
+
+if [ "$cmd" = "-i" ]; then
+	exit 0
+fi
+
+
