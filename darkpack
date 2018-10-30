@@ -37,6 +37,7 @@ if [ "$1" = "-i" ]; then
 	pack="$2"
 	check="$2"
 	checkno="$3"
+	pack=$(readlink -f $pack)
 	if [ ! -e "$pack" ]; then
 		echo "Error: file not found"
 		exit 1
@@ -47,6 +48,7 @@ if [ "$1" = "-u" ]; then
 	pack="$2"
 	check="$2"
 	checkno="$3"
+	pack=$(readlink -f $pack)
 	if [ ! -e "$pack" ]; then
 		echo "Error: file not found"
 		exit 1
@@ -68,7 +70,7 @@ function encryptFile {
 
 # encfile destfile
 function decryptFile {
-	gpg --batch --passphrase-fd 0 -o "$2" -d "$1"
+	gpg -q --batch --passphrase-fd 0 -o "$2" -d "$1" 2>&1 > /dev/null
 }
 
 function doPack {
@@ -112,23 +114,29 @@ if [ "$cmd" = "-i" ]; then
 
 	# unpack description
 	tmp=$(mktemp -d)
-	tar xf "$pack" -C "$temp" description.gpg
+	tar xf "$pack" -C "$tmp" description.gpg
 	if [ $? -ne 0 ]; then
 		echo "unpack failed"
 		exit 1
 	fi
 
 	# decrypt meta data
-	echo "$password" | decryptFile "$temp/description.gpg" "$temp/description"
+	echo "$password" | decryptFile "$tmp/description.gpg" "$tmp/description"
 	if [ $? -ne 0 ]; then
 		echo "decrypt failed"
 		exit 1
 	fi
-	cat "$temp/description"
-	cd "$temp"
+	echo ""
+	echo ""
+	echo "-------------------------------------"
+	echo "Dark Pack Archive:"
+	echo ""
+	echo "Info: $(cat $tmp/description)"
+	echo "-------------------------------------"
+	cd "$tmp"
 	rm -f *
 	cd ..
-	rmdir -f "$temp"
+	rmdir "$tmp"
 	exit 0
 fi
 
