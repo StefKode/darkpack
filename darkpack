@@ -66,11 +66,14 @@ function encryptFile {
 	gpg --batch --passphrase-fd 0 -c "$1"
 }
 
+# encfile destfile
+function decryptFile {
+	gpg --batch --passphrase-fd 0 -o "$2" -d "$1"
+}
+
 function doPack {
 	# get password
 	read -s -p "Password: " password
-
-	echo "$password"
 
 	# create working dir
 	temp=$(mktemp -d)
@@ -96,8 +99,6 @@ function doPack {
 	cd ..
 	rmdir "$temp"
 	cd $cwd
-
-	echo $temp
 }
 
 if [ "$cmd" = "-p" ]; then
@@ -106,6 +107,28 @@ if [ "$cmd" = "-p" ]; then
 fi
 
 if [ "$cmd" = "-i" ]; then
+	# get password
+	read -s -p "Password: " password
+
+	# unpack description
+	tmp=$(mktemp -d)
+	tar xf "$pack" -C "$temp" description.gpg
+	if [ $? -ne 0 ]; then
+		echo "unpack failed"
+		exit 1
+	fi
+
+	# decrypt meta data
+	echo "$password" | decryptFile "$temp/description.gpg" "$temp/description"
+	if [ $? -ne 0 ]; then
+		echo "decrypt failed"
+		exit 1
+	fi
+	cat "$temp/description"
+	cd "$temp"
+	rm -f *
+	cd ..
+	rmdir -f "$temp"
 	exit 0
 fi
 
