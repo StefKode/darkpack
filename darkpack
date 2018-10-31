@@ -1,5 +1,6 @@
 #!/bin/bash
-#
+# Stefan Koch, 2018
+# License: GPL v3
 #
 #
 # darkpack -p my_arch_name file|dir
@@ -75,7 +76,16 @@ function decryptFile {
 
 function doPack {
 	# get password
-	read -s -p "Password: " password
+	read -s -p "  Type Password: " password0
+	echo ""
+	read -s -p "ReType Password: " password
+	echo ""
+
+	if [ "$password0" != "$password" ]; then
+		echo "Error: passwords empty or dont match"
+		rm -f $pack
+		exit 1
+	fi
 
 	# create working dir
 	temp=$(mktemp -d)
@@ -88,7 +98,7 @@ function doPack {
 	rm -f "$temp/description"
 
 	# pack the src
-	tar cvfz "$temp/content" "$src"
+	tar cfz "$temp/content" "$src"
 
 	# encrypt content
 	echo "$password" | encryptFile "$temp/content"
@@ -96,11 +106,12 @@ function doPack {
 
 	# pack the pack
 	cd $temp
-	tar cvf "$pack" *
+	tar cf "$pack" *
 	rm -f *
 	cd ..
 	rmdir "$temp"
 	cd $cwd
+	echo "Created: $pack"
 }
 
 if [ "$cmd" = "-p" ]; then
