@@ -114,12 +114,7 @@ function doPack {
 	echo "Created: $pack"
 }
 
-if [ "$cmd" = "-p" ]; then
-	doPack
-	exit 0
-fi
-
-if [ "$cmd" = "-i" ]; then
+function checkPack {
 	# get password
 	read -s -p "Password: " password
 
@@ -148,6 +143,77 @@ if [ "$cmd" = "-i" ]; then
 	rm -f *
 	cd ..
 	rmdir "$tmp"
+	exit 0
+}
+
+function unPack {
+	# get password
+	read -s -p "Password: " password
+
+	# unpack description
+	tmp=$(mktemp -d "$HOME/darkpack.XXXXXX")
+	tar xf "$pack" -C "$tmp" description.gpg
+	if [ $? -ne 0 ]; then
+		echo "unpack failed"
+		echo "Delete: $tmp manually"
+		exit 1
+	fi
+
+	# decrypt meta data
+	echo "$password" | decryptFile "$tmp/description.gpg" "$tmp/description"
+	if [ $? -ne 0 ]; then
+		echo "decrypt failed"
+		echo "Delete: $tmp manually"
+		exit 1
+	fi
+	echo ""
+	echo ""
+	echo "-------------------------------------"
+	echo "Dark Pack Archive:"
+	echo ""
+	echo "Info: $(cat $tmp/description)"
+	echo "-------------------------------------"
+	cd "$tmp"
+	echo "Decrypt contents? (Enter=Y, Ctrl-C=No)"
+	read ignore
+
+	tar xf "$pack" -C "$tmp" content.gpg
+	if [ $? -ne 0 ]; then
+		echo "extract of contents failed"
+		echo "Delete: $tmp manually"
+		exit 1
+	fi
+	# decrypt meta data
+	echo "$password" | decryptFile "$tmp/content.gpg" "$tmp/content"
+	if [ $? -ne 0 ]; then
+		echo "decrypt failed"
+		echo "Delete: $tmp manually"
+		exit 1
+	fi
+	cd "$tmp"
+	tar xvf content
+	if [ $? -ne 0 ]; then
+		echo "unpack of contents failed"
+		echo "Delete: $tmp manually"
+		exit 1
+	fi
+	rm -f content.gpg content description.gpg
+	echo "OK"
+	echo "Restored data in $tmp"
+}
+
+if [ "$cmd" = "-p" ]; then
+	doPack
+	exit 0
+fi
+
+if [ "$cmd" = "-i" ]; then
+	checkPack
+	exit 0
+fi
+
+if [ "$cmd" = "-u" ]; then
+	unPack
 	exit 0
 fi
 
