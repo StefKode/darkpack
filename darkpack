@@ -57,9 +57,9 @@ if [ "$1" = "-u" ]; then
 fi
 
 if [ "$check" = "" -o "$checkno" != "" ]; then
-	echo " darkpack -p my_arch_name file|dir"
-	echo " darkpack -i my_arch_name"
-	echo " darkpack -u my_arch_name"
+	echo " darkpack -p my_arch_name file|dir   : pack and encrypt archive"
+	echo " darkpack -i my_arch_name            : show info about pack"
+	echo " darkpack -u my_arch_name            : unpack archive into temporary folder"
 	exit 1
 fi
 
